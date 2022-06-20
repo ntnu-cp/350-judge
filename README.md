@@ -4,6 +4,7 @@
 
 - [Problem](https://v2.noj.tw/course/110-Computer-Programming-II/problem/350)
 - Sample testcase is avaliable [here](https://idocntnu-my.sharepoint.com/:u:/g/personal/40747019s_eduad_ntnu_edu_tw/EW27VmA4_fBLi5SznEP59KgBXNmLON4kKtHyJv_JCQnRPA?e=MjTsYc).
+  You should extract this to `./testcase`.
 
 ## Cheatsheet
 
