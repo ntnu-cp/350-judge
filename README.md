@@ -16,16 +16,16 @@ The output is like following:
 
 ```
 Run submission my-main.c
-Case #0: Pass
-Case #1: Pass
-Case #2: Pass
-Case #3: Pass
-Case #4: Pass
-Case #5: Pass
-Case #6: Pass
-Case #7: Pass
-Case #8: Pass
-Case #9: Pass
+Case #0: AC
+Case #1: AC
+Case #2: AC
+Case #3: AC
+Case #4: AC
+Case #5: AC
+Case #6: AC
+Case #7: AC
+Case #8: AC
+Case #9: AC
 Total score: 100
 ```
 
@@ -42,7 +42,7 @@ output
 └── 0800.log-2022-04-28
 ```
 
-If you don't need to keep these log files, run this script with 1 or 0 `-v` option to decrease the verbose level.
+If you don't want to keep these log files. Run this script with 1 or 0 `-v` option to decrease the verbose level.
 e.g. `poetry run python judge.py judge-one my-main.c`
 
 ## Run Locally

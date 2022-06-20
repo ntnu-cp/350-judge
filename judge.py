@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 import itertools
 import json
+import enum
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from collections import defaultdict
@@ -14,6 +15,14 @@ testcase_root = Path('testcase')
 verbose = 0
 
 
+class TestcaseResult(str, enum.Enum):
+    AC = 'AC'
+    WA_CONTENT = 'WA-CONTENT'
+    WA_MISSING = 'WA-MISSING'
+    RE = 'RE'
+    TLE = 'TLE'
+
+
 def get_score(code: Path) -> int:
     try:
         exe_path = compile(code)
@@ -21,31 +30,16 @@ def get_score(code: Path) -> int:
         if verbose:
             print(f'Compile error {code}')
         return 0
-    if verbose > 1:
-        results = collect_results_sync(exe_path)
+    results = [*collect_results(exe_path)]
+    if verbose:
         print(f'Run submission {code}')
-        for i, result in enumerate(results):
-            print(f'Case #{i}: {"Pass" if result else "Fail"}')
-    else:
-        results = collect_results(exe_path)
-        if verbose:
-            results = [*results]
-            print(f'Run submission {code}')
-            for i, s in enumerate(results):
-                print(f'Case #{i}: {"Pass" if s else "Fail"}')
-    score = sum(10 for _ in filter(None, results))
+        for i, s in enumerate(results):
+            print(f'Case #{i}: {s}')
+    score = sum(10 for r in results if r == TestcaseResult.AC)
     return score
 
 
-def collect_results_sync(exe_path: Path) -> Iterable[bool]:
-    results = []
-    for i in range(10):
-        testcase_pat = f'{i:02d}00'
-        results.append(run_testcase(exe_path, testcase_pat))
-    return results
-
-
-def collect_results(exe_path: Path) -> Iterable[bool]:
+def collect_results(exe_path: Path) -> Iterable[TestcaseResult]:
     with ProcessPoolExecutor() as executor:
         patterns = []
         for i in range(10):
@@ -70,7 +64,7 @@ def compile(code: Path) -> Path:
     return Path(tmp_file.name)
 
 
-def run_testcase(exe_path: Path, testcase_pat: str) -> bool:
+def run_testcase(exe_path: Path, testcase_pat: str) -> TestcaseResult:
     student_exe_name = 'main'
     with tempfile.TemporaryDirectory() as sandbox:
         sandbox = Path(sandbox)
@@ -80,24 +74,26 @@ def run_testcase(exe_path: Path, testcase_pat: str) -> bool:
             subprocess.check_call(
                 f'./{student_exe_name}',
                 cwd=sandbox,
-                timeout=3,
+                timeout=30,
                 stdin=(testcase_root / (testcase_pat + '.in')).open(),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-        except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
-            return False
+        except subprocess.TimeoutExpired:
+            return TestcaseResult.TLE
+        except subprocess.CalledProcessError:
+            return TestcaseResult.RE
         for ans_log in testcase_root.glob(f'{testcase_pat}.log-*'):
             student_log = sandbox / ans_log.name
             if not student_log.exists():
-                return False
+                return TestcaseResult.WA_MISSING
             if not cmp(ans_log.read_text(), student_log.read_text()):
                 if verbose > 1:
                     output = Path('output')
                     (output / student_log.name).write_text(
                         student_log.read_text())
-                return False
-    return True
+                return TestcaseResult.WA_CONTENT
+    return TestcaseResult.AC
 
 
 def cmp(a: str, b: str) -> bool:
@@ -154,7 +150,7 @@ def judge_all():
             user_scores = executor.map(
                 get_score,
                 user.iterdir(),
-                timeout=60,
+                timeout=150,
             )
             scores[user.name] = max(user_scores)
     print(json.dumps(scores))
