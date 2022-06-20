@@ -3,12 +3,13 @@ FROM python:3.8-slim
 WORKDIR /noj-350
 RUN apt update && apt install -y gcc
 # Get poetry
-RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+RUN pip install poetry
 # Install
-RUN poetry install
-COPY poetry.lock .
 COPY pyproject.toml .
+COPY poetry.lock .
+RUN poetry install --no-dev
 COPY judge.py .
 
-CMD ["poetry", "run", "python", "judge.py"]
+ENTRYPOINT ["poetry", "run", "python", "judge.py"]
 
+CMD [ "help" ]

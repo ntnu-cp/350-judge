@@ -5,3 +5,5 @@ services:
     volumes:
       - ./submissions:/noj-350/submissions:ro
       - ./testcase:/noj-350/testcase:ro
+    command:
+      - judge-all
