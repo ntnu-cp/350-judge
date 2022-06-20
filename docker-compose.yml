@@ -1,0 +1,7 @@
+version: '3.8'
+services:
+  judger:
+    build: .
+    volumes:
+      - ./submissions:/noj-350/submissions:ro
+      - ./testcase:/noj-350/testcase:ro
