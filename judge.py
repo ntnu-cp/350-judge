@@ -76,7 +76,9 @@ def run_testcase(exe_path: Path, testcase_pat: str) -> TestcaseResult:
         except subprocess.TimeoutExpired:
             return TestcaseResult.TLE
         except subprocess.CalledProcessError:
-            return TestcaseResult.RE
+            # Some programs return non-0 exit code even if they exit normally
+            # return TestcaseResult.RE
+            pass
         for ans_log in testcase_root.glob(f'{testcase_pat}.log-*'):
             student_log = sandbox / ans_log.name
             if not student_log.exists():
