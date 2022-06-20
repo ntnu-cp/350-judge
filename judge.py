@@ -1,13 +1,11 @@
 import shutil
 import subprocess
 import tempfile
-import itertools
 import json
 import enum
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from collections import defaultdict
-from typing import Iterable
+from typing import Generator
 import click
 
 submission_root = Path('submissions')
@@ -27,31 +25,27 @@ def get_score(code: Path) -> int:
     try:
         exe_path = compile(code)
     except subprocess.CalledProcessError:
-        if verbose:
+        if verbose > 1:
             print(f'Compile error {code}')
         return 0
-    results = [*collect_results(exe_path)]
     if verbose:
+        score = 0
+        results = collect_results(exe_path)
         print(f'Run submission {code}')
         for i, s in enumerate(results):
             print(f'Case #{i}: {s}')
-    score = sum(10 for r in results if r == TestcaseResult.AC)
+            if s == TestcaseResult.AC:
+                score += 10
+    else:
+        results = collect_results(exe_path)
+        score = sum(10 for r in results if r == TestcaseResult.AC)
     return score
 
 
-def collect_results(exe_path: Path) -> Iterable[TestcaseResult]:
-    with ProcessPoolExecutor() as executor:
-        patterns = []
-        for i in range(10):
-            testcase_pat = f'{i:02d}00'
-            patterns.append(testcase_pat)
-        results = executor.map(
-            run_testcase,
-            itertools.repeat(exe_path),
-            patterns,
-            timeout=30,
-        )
-    return results
+def collect_results(exe_path: Path) -> Generator[TestcaseResult, None, None]:
+    for i in range(10):
+        testcase_pat = f'{i:02d}00'
+        yield run_testcase(exe_path, testcase_pat)
 
 
 def compile(code: Path) -> Path:
@@ -111,6 +105,11 @@ def preprocess_output(s: str) -> str:
 def main(_verbose: int):
     global verbose
     verbose = _verbose
+    if verbose > 1:
+        output = Path('output')
+        if output.exists():
+            shutil.rmtree(output)
+        output.mkdir()
 
 
 @main.command()
@@ -126,11 +125,6 @@ def judge_one(submission: Path):
     '''
     Judge single submission
     '''
-    if verbose > 1:
-        output = Path('output')
-        if output.exists():
-            shutil.rmtree(output)
-        output.mkdir()
     score = get_score(submission)
     if verbose:
         print(f'Total score: {score}')
@@ -145,14 +139,9 @@ def judge_all():
     '''
     scores = defaultdict(int)
     for user in submission_root.iterdir():
-        print(f'Start {user}')
-        with ProcessPoolExecutor() as executor:
-            user_scores = executor.map(
-                get_score,
-                user.iterdir(),
-                timeout=150,
-            )
-            scores[user.name] = max(user_scores)
+        if verbose:
+            print(f'Start {user}')
+        scores[user.name] = max(get_score(d) for d in user.iterdir())
     print(json.dumps(scores))
 
 
