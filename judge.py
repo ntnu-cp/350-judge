@@ -1,10 +1,8 @@
 import shutil
 import subprocess
-import sys
 import tempfile
 import itertools
 import json
-import difflib
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from collections import defaultdict
@@ -39,10 +37,12 @@ def get_score(code: Path) -> int:
     return score
 
 
-def collect_results_sync(exe_path: Path):
+def collect_results_sync(exe_path: Path) -> Iterable[bool]:
+    results = []
     for i in range(10):
         testcase_pat = f'{i:02d}00'
-        yield run_testcase(exe_path, testcase_pat)
+        results.append(run_testcase(exe_path, testcase_pat))
+    return results
 
 
 def collect_results(exe_path: Path) -> Iterable[bool]:
@@ -87,9 +87,9 @@ def run_testcase(exe_path: Path, testcase_pat: str) -> bool:
             )
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
             return False
-        for student_log in sandbox.glob(f'{testcase_pat}.log-*'):
-            ans_log = testcase_root / student_log.name
-            if not ans_log.exists():
+        for ans_log in testcase_root.glob(f'{testcase_pat}.log-*'):
+            student_log = sandbox / ans_log.name
+            if not student_log.exists():
                 return False
             if not cmp(ans_log.read_text(), student_log.read_text()):
                 if verbose > 1:
