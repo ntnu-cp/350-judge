@@ -12,4 +12,4 @@ COPY judge.py .
 
 ENTRYPOINT ["poetry", "run", "python", "judge.py"]
 
-CMD [ "help" ]
+CMD [ "--help" ]
